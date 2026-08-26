@@ -227,7 +227,11 @@ const chatGptTerminalErrorAlert = (scope: ChatGptTextScope): Locator => scope
   .getByText(/Something went wrong[\s\S]*help\.openai\.com/i)
   .last();
 
-export async function throwIfChatGptTerminalErrorAlert(scope: ChatGptTextScope): Promise<void> {
+export async function throwIfChatGptTerminalErrorAlert(
+  scope: ChatGptTextScope,
+  completedAnswerVisible = false,
+): Promise<void> {
+  if (completedAnswerVisible) return;
   if (!await chatGptTerminalErrorAlert(scope).isVisible().catch(() => false)) return;
   throw new ChatGptWebAdapterError(
     "ChatGPT ended the turn with 'Something went wrong'. Retry the turn.",
@@ -1802,8 +1806,11 @@ export class ChatGptBrowserWorker {
         throw new Error("ChatGPT Bigger Context transaction timed out while awaiting a stage acknowledgement");
       }
       await throwIfChatGptSessionFailureAlert(page);
-      await throwIfChatGptTerminalErrorAlert(responseTurn);
       const snapshot = await this.responseDomSnapshot(responseTurn);
+      await throwIfChatGptTerminalErrorAlert(
+        responseTurn,
+        snapshot.completionActionVisible && snapshot.visibleText.length > 0,
+      );
       if (stoppedThinkingTracker.update(snapshot.stoppedThinkingVisible)) {
         throw chatGptStoppedThinkingError();
       }
@@ -2678,7 +2685,6 @@ export class ChatGptBrowserWorker {
         }
 
         await throwIfChatGptSessionFailureAlert(page);
-        await throwIfChatGptTerminalErrorAlert(responseTurn);
         await throwIfChatGptUnusualActivityAlert(responseTurn);
 
         if (mode.localTools && await resolveChatGptToolConfirmation(
@@ -2694,6 +2700,10 @@ export class ChatGptBrowserWorker {
         }
 
         const snapshot = await this.responseDomSnapshot(responseTurn);
+        await throwIfChatGptTerminalErrorAlert(
+          responseTurn,
+          snapshot.completionActionVisible && snapshot.visibleText.length > 0,
+        );
         if (stoppedThinkingTracker.update(snapshot.stoppedThinkingVisible)) {
           throw chatGptStoppedThinkingError();
         }

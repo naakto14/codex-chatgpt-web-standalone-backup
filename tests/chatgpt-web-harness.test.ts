@@ -911,6 +911,9 @@ describe("ChatGPT outer-native harness v4", () => {
           code: "chatgpt_submission_ambiguous",
           retryable: false,
         });
+        expect(events.at(-1)).toMatchObject({
+          message: "ChatGPT Send was activated, but acceptance could not be proven; the prompt will not be resent: ChatGPT upstream returned 502 after Send activation",
+        });
       }
       expect(browserStarts).toBe(1);
     } finally {
@@ -951,6 +954,9 @@ describe("ChatGPT outer-native harness v4", () => {
           type: "error",
           code: "chatgpt_submitted_turn_failed",
           retryable: false,
+        });
+        expect(events.at(-1)).toMatchObject({
+          message: "ChatGPT failed after accepting the Web prompt; the prompt will not be resent: ChatGPT upstream returned 502 after accepting the prompt",
         });
       }
       expect(browserStarts).toBe(1);

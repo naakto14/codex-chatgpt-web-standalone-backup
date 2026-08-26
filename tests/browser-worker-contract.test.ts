@@ -1155,6 +1155,15 @@ test("the known terminal ChatGPT error alert returns a structured retryable fail
   expect(fixture.pressed).toEqual([]);
 });
 
+test("a completed answer wins over a stale terminal ChatGPT error alert", async () => {
+  const fixture = dialogPage(
+    "Something went wrong. If this issue persists please contact us through our help center at help.openai.com.",
+  );
+
+  await expect(throwIfChatGptTerminalErrorAlert(fixture.page, true)).resolves.toBeUndefined();
+  expect(fixture.pressed).toEqual([]);
+});
+
 test("the unusual-activity ChatGPT error returns a structured retryable 429", async () => {
   const fixture = dialogPage(
     "Unusual activity has been detected from your device. Try again later. (b2d7fe20-47dd-41a9-b862-15d14e17368d)",
@@ -1323,7 +1332,7 @@ test("effort menu waiting stops when ChatGPT reports an expired session", async 
 
 test("terminal model errors are scoped to the new assistant turn instead of global page alerts", () => {
   const workerSource = readFileSync(new URL("../src/adapters/chatgpt-web/browser-worker.ts", import.meta.url), "utf8");
-  expect(workerSource).toContain("throwIfChatGptTerminalErrorAlert(responseTurn)");
+  expect(workerSource).toContain("throwIfChatGptTerminalErrorAlert(\n          responseTurn,");
   expect(workerSource).not.toContain("throwIfChatGptTerminalErrorAlert(page)");
 });
 

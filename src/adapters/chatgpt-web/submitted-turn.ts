@@ -2,6 +2,12 @@ import { ChatGptWebAdapterError } from "./adapter-error";
 import type { ChatGptTurnSession } from "./turn-execution";
 
 function terminalError(error: unknown, phase: "send_activated" | "accepted"): ChatGptWebAdapterError {
+  if (error instanceof ChatGptWebAdapterError && (
+    error.code === "chatgpt_submission_ambiguous"
+    || error.code === "chatgpt_submitted_turn_failed"
+  )) {
+    return error;
+  }
   const ambiguous = phase === "send_activated";
   return new ChatGptWebAdapterError(
     ambiguous

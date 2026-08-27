@@ -11,7 +11,7 @@ import { AsyncEventQueue } from "./event-queue";
 import { readJsonRequestBody } from "./http-body";
 import { httpStatusFromTerminalError } from "./lib/errors";
 import { createHash } from "node:crypto";
-import { augmentNativeModelCatalog } from "./model-catalog";
+import { augmentNativeModelCatalog, nativeCatalogHasSolBackedWebEligibility } from "./model-catalog";
 import {
   readCodexModelContextOverride,
   readCodexSubagentProtocol,
@@ -209,7 +209,14 @@ export async function modelsRequest(
   if (!upstream.ok) return upstream;
   let catalog: Record<string, unknown>;
   try {
-    catalog = augmentNativeModelCatalog(await upstream.json(), config, contextOverride?.());
+    const nativeCatalog = await upstream.json();
+    if (!config.solAvailable && nativeCatalogHasSolBackedWebEligibility(nativeCatalog)) {
+      // Luna Reserve removes the browser effort selector, which made the setup probe report a
+      // false Luna-only capability. The hidden native reserve row is the account-level signal that
+      // the Sol-backed Web routes remain valid; retain that capability for this running service.
+      config.solAvailable = true;
+    }
+    catalog = augmentNativeModelCatalog(nativeCatalog, config, contextOverride?.());
   } catch (error) {
     return formatErrorResponse(502, "invalid_response_error", error instanceof Error ? error.message : String(error));
   }
@@ -661,6 +668,9 @@ export function startServer(
             dependencies.fetchUpstream,
             readCodexModelContextOverride,
           );
+          // `modelsRequest` may recover Sol availability from the hidden native reserve row. Keep
+          // the live request config in sync so a subsequent Web model request is accepted too.
+          if (catalogConfig.solAvailable) config.solAvailable = true;
           if (response.ok) {
             successfulModelCatalogRequests += 1;
             lastSuccessfulModelCatalogRequestAt = new Date().toISOString();

@@ -5,7 +5,7 @@ import {
   CHATGPT_WEB_MODEL_ROUTES,
   resolveChatGptWebContextLimits,
 } from "../src/chatgpt-web-models";
-import { augmentNativeModelCatalog } from "../src/model-catalog";
+import { augmentNativeModelCatalog, nativeCatalogHasSolBackedWebEligibility } from "../src/model-catalog";
 
 function source(): Record<string, unknown> {
   return {
@@ -207,6 +207,20 @@ describe("native /models augmentation", () => {
 
     expect(models.map(model => model.slug)).toContain("chatgpt-web/high");
     expect(models.find(model => model.slug === "gpt-reserve")).toMatchObject({ visibility: "hide" });
+  });
+
+  test("recognizes only an API-supported hidden reserve row as Sol-backed eligibility", () => {
+    const native = source();
+    (native.models as Array<Record<string, unknown>>).push({
+      slug: "gpt-reserve",
+      visibility: "hide",
+      supported_in_api: true,
+    });
+    expect(nativeCatalogHasSolBackedWebEligibility(native)).toBe(true);
+    expect(nativeCatalogHasSolBackedWebEligibility({
+      models: [{ slug: "gpt-reserve", visibility: "hide", supported_in_api: false }],
+    })).toBe(false);
+    expect(nativeCatalogHasSolBackedWebEligibility({ models: [{ slug: "gpt-5.6-sol" }] })).toBe(false);
   });
 
   test("raises only native maximum windows for an explicit Codex context override", () => {

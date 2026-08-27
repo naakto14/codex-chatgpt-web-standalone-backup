@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { launcherCapabilityProbeRequired, setupProxyIsReady } from "../src/setup";
+import {
+  launcherCapabilityProbeRequired,
+  mergeLauncherAccountCapabilities,
+  setupProxyIsReady,
+} from "../src/setup";
 
 const config = {
   mode: "browser-only" as const,
@@ -35,4 +39,23 @@ test("launcher setup refreshes account capabilities only when missing or explici
     proAvailable: false,
   } as never)).toBe(true);
   expect(launcherCapabilityProbeRequired(verifiedLauncher, true)).toBe(true);
+});
+
+test("launcher setup keeps Sol-backed Web routes during a Luna Reserve fallback", () => {
+  expect(mergeLauncherAccountCapabilities(
+    { solAvailable: true, proAvailable: false },
+    { solAvailable: false, proAvailable: false },
+  )).toEqual({ solAvailable: true, proAvailable: false });
+  expect(mergeLauncherAccountCapabilities(
+    { solAvailable: true, proAvailable: true },
+    { solAvailable: false, proAvailable: false },
+  )).toEqual({ solAvailable: true, proAvailable: true });
+  expect(mergeLauncherAccountCapabilities(
+    undefined,
+    { solAvailable: false, proAvailable: false },
+  )).toEqual({ solAvailable: false, proAvailable: false });
+  expect(mergeLauncherAccountCapabilities(
+    { solAvailable: true, proAvailable: true },
+    { solAvailable: true, proAvailable: false },
+  )).toEqual({ solAvailable: true, proAvailable: false });
 });
